@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Match — HemoLink Hospital</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon" style="background:var(--info);"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Hospital Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="requests.html" class="menu-item"><i class="fa-solid fa-hand-holding-medical"></i> Blood Requests</a>
+            <a href="emergency.html" class="menu-item active"><i class="fa-solid fa-bolt"></i> Emergency Match</a>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donations Received</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" style="background:#0c2a38; color:#06b6d4;">NH</div>
+                <div class="user-details">
+                    <h4 id="hosp-sidebar-name">National Hospital Colombo</h4>
+                    <p id="hosp-sidebar-license">SL-2024-001</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1><i class="fa-solid fa-bolt" style="color:var(--danger);"></i> Rapid Emergency Donor Match</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="notifications.html" class="notif-bell" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel" style="margin-bottom:24px;">
+                <form id="form-emergency-search" onsubmit="handleEmergencySearch(event)" class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Required Blood Group</label>
+                        <select id="emg-group" class="form-control">
+                            <option value="O-">O- (Universal Donor)</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Target City</label>
+                        <input type="text" id="emg-city" class="form-control" placeholder="City (e.g. Colombo, Kandy)" value="Colombo">
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <button type="submit" class="btn btn-primary" style="width:100%;"><i class="fa-solid fa-bolt"></i> Run Emergency Matching</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Ranked Donors List -->
+            <div class="card-panel">
+                <div class="panel-header">
+                    <div class="panel-title">Top Compatible Eligible Donors</div>
+                </div>
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>RANK / SCORE</th>
+                                <th>DONOR NAME</th>
+                                <th>BLOOD TYPE</th>
+                                <th>LOCATION</th>
+                                <th>PHONE</th>
+                                <th>COOLDOWN STATUS</th>
+                                <th>ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emergency-results-body">
+                            <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Select blood group and city above to run emergency donor matching.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        let currentHospital = null;
+
+        async function loadHospitalInfo() {
+            const dashData = await apiGet('DashboardServlet?action=hospital');
+            if (dashData && dashData.hospital) {
+                currentHospital = dashData.hospital;
+                document.getElementById('hosp-sidebar-name').innerText = currentHospital.name;
+                document.getElementById('hosp-sidebar-license').innerText = currentHospital.license;
+                if (currentHospital.city) {
+                    document.getElementById('emg-city').value = currentHospital.city;
+                }
+            }
+        }
+
+        async function handleEmergencySearch(e) {
+            if (e) e.preventDefault();
+            const group = document.getElementById('emg-group').value;
+            const rawCity = document.getElementById('emg-city').value;
+            const targetCity = rawCity ? rawCity.trim().toLowerCase() : '';
+
+            const cityMsg = targetCity ? ' in ' + rawCity.trim() : '';
+            showToast('Searching compatible donors for ' + group + cityMsg + '...', 'info');
+
+            // Query compatible donors with city filter
+            const params = new URLSearchParams();
+            params.append('action', 'searchCompatible');
+            params.append('recipientBloodType', group.replace(/[+-]/g, ''));
+            params.append('recipientRh', group.includes('-') ? '-' : '+');
+            if (targetCity) params.append('city', rawCity.trim());
+
+            let candidates = await apiGet('DonorServlet?' + params.toString());
+            const tbody = document.getElementById('emergency-results-body');
+            tbody.innerHTML = '';
+
+            if (!candidates || !Array.isArray(candidates)) {
+                candidates = [];
+            }
+
+            // Enforce strict city matching and availability filtering
+            let filtered = candidates.filter(d => {
+                const isAvail = d.available !== undefined ? d.available : d.isAvailable;
+                const isApproved = d.approvalStatus === 'approved';
+                if (!isApproved || !isAvail) return false;
+
+                if (targetCity) {
+                    if (!d.city || !d.city.toLowerCase().trim().includes(targetCity)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // Score matches
+            let matches = filtered.map(d => {
+                let score = 50;
+                const dGroup = (d.bloodType || '') + (d.rhFactor || '');
+                if (dGroup === group) {
+                    score += 30;
+                } else if (isCompatibleBlood(dGroup, group)) {
+                    score += 20;
+                }
+
+                if (d.city && targetCity && d.city.toLowerCase().trim().includes(targetCity)) {
+                    score += 20;
+                }
+                return { donor: d, score: Math.min(100, score) };
+            });
+
+            matches.sort((a, b) => b.score - a.score);
+
+            if (matches.length === 0) {
+                const noDataText = targetCity
+                    ? `No active available donors found in "${rawCity.trim()}" matching blood group ${group}.`
+                    : `No active available donors matched emergency criteria for blood group ${group}.`;
+
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--warning); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${noDataText}</td></tr>`;
+                return;
+            }
+
+            matches.forEach((m, idx) => {
+                const d = m.donor;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <span class="badge badge-success" style="font-size:13px;">#${idx+1} &middot; ${m.score} PTS</span>
+                    </td>
+                    <td style="font-weight:700; color:#fff;">${d.name}</td>
+                    <td><span class="badge badge-danger">${d.bloodType}${d.rhFactor}</span></td>
+                    <td>${d.city || '—'}</td>
+                    <td><strong style="color:var(--info);">${d.phone || '—'}</strong></td>
+                    <td><span class="badge badge-success">READY (ELIGIBLE)</span></td>
+                    <td>
+                        <div style="display:flex; gap:6px;">
+                            <a href="tel:${d.phone}" class="btn btn-success btn-sm" title="Call Donor"><i class="fa-solid fa-phone"></i> Call</a>
+                            <button class="btn btn-primary btn-sm" onclick="sendEmergencyAlert(${d.id}, '${(d.name || '').replace(/'/g, "\\'")}', '${d.phone || ''}')">
+                                <i class="fa-solid fa-paper-plane"></i> Alert Donor
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function sendEmergencyAlert(donorId, name, phone) {
+            const group = document.getElementById('emg-group').value;
+            const hospName = currentHospital ? currentHospital.name : 'Hospital';
+            const res = await apiPost('BloodRequestServlet', {
+                action: 'emergencyAlert',
+                donorId: donorId,
+                hospitalName: hospName,
+                bloodGroup: group
+            });
+            showToast(`Emergency alert notification sent to ${name} (${phone})`, 'success');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHospitalInfo();
+        });
+    </script>
+</body>
+</html>

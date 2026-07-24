@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications — HemoLink Hospital</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon" style="background:var(--info);"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Hospital Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="requests.html" class="menu-item"><i class="fa-solid fa-hand-holding-medical"></i> Blood
+                Requests</a>
+            <a href="emergency.html" class="menu-item"><i class="fa-solid fa-bolt"></i> Emergency Match</a>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donations
+                Received</a>
+            <a href="notifications.html" class="menu-item active"><i class="fa-solid fa-bell"></i> Notifications</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" style="background:#0c2a38; color:#06b6d4;">NH</div>
+                <div class="user-details">
+                    <h4 id="hosp-sidebar-name">National Hospital Colombo</h4>
+                    <p id="hosp-sidebar-license">SL-2024-001</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i
+                    class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Hospital Notifications</h1>
+            </div>
+            <div class="topbar-actions">
+                <button class="btn btn-secondary btn-sm" onclick="markAllRead()"><i
+                        class="fa-solid fa-check-double"></i> Mark All as Read</button>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div id="notif-list-container">
+                <!-- JS populated -->
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        async function loadNotifications() {
+            const container = document.getElementById('notif-list-container');
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+
+            const list = await apiGet('NotificationServlet');
+            container.innerHTML = '';
+
+            if (!list || list.length === 0) {
+                container.innerHTML = '<div class="card-panel" style="color:var(--text-muted); text-align:center;">No notifications found for your hospital account.</div>';
+                return;
+            }
+
+            list.forEach(n => {
+                const card = document.createElement('div');
+                card.className = 'card-panel';
+                card.style.marginBottom = '12px';
+                card.style.opacity = n.isRead ? '0.65' : '1';
+
+                let icon = 'fa-info-circle';
+                let color = 'var(--info)';
+                if (n.type === 'request') { icon = 'fa-droplet'; color = 'var(--danger)'; }
+                if (n.type === 'success') { icon = 'fa-check-circle'; color = 'var(--success)'; }
+                if (n.type === 'alert') { icon = 'fa-triangle-exclamation'; color = 'var(--warning)'; }
+
+                const statusBadge = n.isRead
+                    ? '<span class="badge" style="background:rgba(255,255,255,0.08); color:var(--text-muted);">Read</span>'
+                    : '<span class="badge badge-danger">Unread</span>';
+
+                card.innerHTML = `
+                    <div style="display:flex; align-items:flex-start; gap:16px;">
+                        <div style="color:${color}; font-size:22px; margin-top:2px;"><i class="fa-solid ${icon}"></i></div>
+                        <div style="flex:1;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-size:15px; font-weight:700; color:#fff;">${n.title}</div>
+                                ${statusBadge}
+                            </div>
+                            <div style="font-size:13px; color:var(--text-main); margin-top:6px; line-height:1.5;">${n.message}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                                <div style="font-size:11px; color:var(--text-muted);"><i class="fa-regular fa-clock"></i> ${n.createdAt ? (typeof n.createdAt === 'string' ? n.createdAt.substring(0, 19).replace('T', ' ') : n.createdAt) : 'Just now'}</div>
+                                ${!n.isRead ? `<button class="btn btn-secondary btn-sm" onclick="markSingleRead(${n.id})" style="padding:4px 10px; font-size:11px;"><i class="fa-solid fa-check"></i> Mark Read</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function markSingleRead(id) {
+            const res = await apiPost('NotificationServlet', { action: 'markRead', id: id });
+            if (res && res.success) {
+                showToast('Notification marked as read', 'success');
+                loadNotifications();
+                updateNotifBadge();
+            }
+        }
+
+        async function markAllRead() {
+            const res = await apiPost('NotificationServlet', { action: 'markAllRead' });
+            if (res && res.success) {
+                showToast('All notifications marked as read', 'success');
+                loadNotifications();
+                updateNotifBadge();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadNotifications);
+    </script>
+</body>
+
+</html>

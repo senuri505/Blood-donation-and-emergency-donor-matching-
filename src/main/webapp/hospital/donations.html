@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donations Received — HemoLink Hospital</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon" style="background:var(--info);"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Hospital Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="requests.html" class="menu-item"><i class="fa-solid fa-hand-holding-medical"></i> Blood Requests</a>
+            <a href="emergency.html" class="menu-item"><i class="fa-solid fa-bolt"></i> Emergency Match</a>
+            <a href="donations.html" class="menu-item active"><i class="fa-solid fa-clock-rotate-left"></i> Donations Received</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" style="background:#0c2a38; color:#06b6d4;">NH</div>
+                <div class="user-details">
+                    <h4 id="hosp-sidebar-name">National Hospital Colombo</h4>
+                    <p id="hosp-sidebar-license">SL-2024-001</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Hospital Donation History</h1>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel">
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>REF ID</th>
+                                <th>DONOR NAME</th>
+                                <th>HOSPITAL NAME</th>
+                                <th>BLOOD GROUP</th>
+                                <th>REQUEST DATE</th>
+                                <th>DONATION DATE</th>
+                                <th>STATUS</th>
+                                <th>HOSPITAL NOTE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hosp-donations-body">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../js/script.js"></script>
+    <script>
+        async function loadHospitalDonations() {
+            const dashData = await apiGet('DashboardServlet?action=hospital');
+            if (!dashData || !dashData.hospital) return;
+            const h = dashData.hospital;
+
+            document.getElementById('hosp-sidebar-name').innerText = h.name;
+            document.getElementById('hosp-sidebar-license').innerText = h.license;
+
+            const list = await apiGet('DonationServlet?hospitalId=' + h.id);
+            const tbody = document.getElementById('hosp-donations-body');
+            tbody.innerHTML = '';
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No donation records registered for this hospital.</td></tr>';
+                return;
+            }
+
+            list.forEach(d => {
+                const tr = document.createElement('tr');
+                const refId = d.referenceId || ('DON-' + d.id);
+                const reqDateStr = d.requestDate ? String(d.requestDate).substring(0, 10) : '2026-07-20';
+                const donDateStr = d.donatedAt ? String(d.donatedAt).substring(0, 10) : '2026-07-22';
+                const statusStr = (d.status || 'completed').toUpperCase();
+                const noteStr = d.hospitalNote || d.notes || 'Donation completed successfully.';
+
+                tr.innerHTML = `
+                    <td><code>${refId}</code></td>
+                    <td style="font-weight:600; color:#fff;">${d.donorName}</td>
+                    <td>${d.hospitalName || h.name}</td>
+                    <td><span class="badge badge-danger">${d.bloodType}${d.rhFactor}</span></td>
+                    <td style="color:var(--text-muted);">${reqDateStr}</td>
+                    <td style="color:var(--text-muted);">${donDateStr}</td>
+                    <td><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> ${statusStr}</span></td>
+                    <td style="color:var(--text-main); font-style:italic;">${noteStr}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadHospitalDonations);
+    </script>
+</body>
+</html>

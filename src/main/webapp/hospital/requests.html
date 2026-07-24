@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Requests — HemoLink Hospital</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon" style="background:var(--info);"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Hospital Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="requests.html" class="menu-item active"><i class="fa-solid fa-hand-holding-medical"></i> Blood Requests</a>
+            <a href="emergency.html" class="menu-item"><i class="fa-solid fa-bolt"></i> Emergency Match</a>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donations Received</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" style="background:#0c2a38; color:#06b6d4;">NH</div>
+                <div class="user-details">
+                    <h4 id="hosp-sidebar-name">National Hospital Colombo</h4>
+                    <p id="hosp-sidebar-license">SL-2024-001</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Hospital Blood Requests</h1>
+            </div>
+            <div class="topbar-actions">
+                <button class="btn btn-primary btn-sm" onclick="openModal('create-request-modal')"><i class="fa-solid fa-plus"></i> Create Blood Request</button>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel">
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>REQ ID</th>
+                                <th>PATIENT</th>
+                                <th>BLOOD TYPE</th>
+                                <th>UNITS</th>
+                                <th>URGENCY</th>
+                                <th>ACCEPTED DONORS</th>
+                                <th>STATUS</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hosp-requests-body">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Submit Request -->
+    <div class="modal-overlay" id="create-request-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title">Create New Blood Request</div>
+                <button class="modal-close" onclick="closeModal('create-request-modal')">&times;</button>
+            </div>
+            <form id="form-create-request" onsubmit="handleCreateRequest(event)">
+                <div class="form-group">
+                    <label class="form-label">Patient Name</label>
+                    <input type="text" id="req-patientName" class="form-control" placeholder="Patient full name" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Blood Type</label>
+                        <select id="req-bloodType" class="form-control">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="AB">AB</option>
+                            <option value="O">O</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rh Factor</label>
+                        <select id="req-rhFactor" class="form-control">
+                            <option value="+">+ Positive</option>
+                            <option value="-">- Negative</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Units Needed</label>
+                        <input type="number" id="req-unitsNeeded" class="form-control" value="1" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Urgency Level</label>
+                        <select id="req-urgency" class="form-control">
+                            <option value="routine">Routine</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Contact Person</label>
+                        <input type="text" id="req-contactPerson" class="form-control" placeholder="Dr. / Contact Name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact Phone</label>
+                        <input type="text" id="req-phone" class="form-control" placeholder="Phone number" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Additional Medical Notes</label>
+                    <textarea id="req-notes" class="form-control" rows="2" placeholder="e.g. Post-surgery transfusion"></textarea>
+                </div>
+
+                <button type="button" id="btn-submit-create-request" onclick="submitBloodRequestForm()" class="btn btn-primary" style="width:100%;"><i class="fa-solid fa-paper-plane"></i> Submit & Broadcast to Matching Donors</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal View Donors & Details -->
+    <div class="modal-overlay" id="view-donors-modal">
+        <div class="modal-box" style="max-width:650px;">
+            <div class="modal-header">
+                <div class="modal-title">Matched Donors & Contact Profiles</div>
+                <button class="modal-close" onclick="closeModal('view-donors-modal')">&times;</button>
+            </div>
+            <div id="donors-modal-body" style="margin-top:16px;">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Complete Donation -->
+    <div class="modal-overlay" id="complete-donation-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title">Mark Donation as Completed</div>
+                <button class="modal-close" onclick="closeModal('complete-donation-modal')">&times;</button>
+            </div>
+            <form id="form-complete-donation" onsubmit="handleCompleteDonation(event)">
+                <input type="hidden" id="complete-req-id">
+                <div style="margin-bottom:16px; font-size:13px; color:var(--text-muted);">
+                    Marking blood request <strong id="complete-req-ref" style="color:#fff;">#---</strong> as <strong>COMPLETED</strong>. This action will update donor history and hospital history.
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Hospital Note / Comment</label>
+                    <textarea id="complete-hospitalNote" class="form-control" rows="3" placeholder="e.g. Donation successfully completed. Donor arrived on time. Blood units received successfully." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-success" style="width:100%;"><i class="fa-solid fa-circle-check"></i> Complete & Save Note</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js?v=2"></script>
+    <script>
+        let currentHospital = null;
+        let allRequests = [];
+        let allDonors = [];
+
+        async function loadHospitalRequests() {
+            const dashData = await apiGet('DashboardServlet?action=hospital');
+            if (!dashData || !dashData.hospital) return;
+            currentHospital = dashData.hospital;
+
+            document.getElementById('hosp-sidebar-name').innerText = currentHospital.name;
+            document.getElementById('hosp-sidebar-license').innerText = currentHospital.license;
+
+            allRequests = await apiGet('BloodRequestServlet?hospitalId=' + currentHospital.id);
+            allDonors = await apiGet('DonorServlet?action=list');
+
+            const tbody = document.getElementById('hosp-requests-body');
+            tbody.innerHTML = '';
+
+            if (!allRequests || allRequests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No requests submitted yet.</td></tr>';
+                return;
+            }
+
+            allRequests.forEach(r => {
+                const acceptedCount = r.acceptedUnits || 0;
+                const acceptedBadge = `<span class="badge ${acceptedCount > 0 ? 'badge-success' : 'badge-warning'}"><i class="fa-solid fa-user-check"></i> ${acceptedCount} / ${r.unitsNeeded} Accepted</span>`;
+                
+                let statusBadgeClass = 'badge-info';
+                let statusText = (r.status || 'pending').toUpperCase();
+                if (r.status === 'completed') {
+                    statusBadgeClass = 'badge-success';
+                    statusText = 'COMPLETED';
+                } else if (r.status === 'fulfilled' || r.status === 'accepted') {
+                    statusBadgeClass = 'badge-success';
+                    statusText = 'FULFILLED';
+                } else if (r.status === 'matching') {
+                    statusBadgeClass = 'badge-primary';
+                    statusText = 'MATCHING';
+                } else if (r.status === 'cancelled') {
+                    statusBadgeClass = 'badge-danger';
+                    statusText = 'CANCELLED';
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><code>#${r.id}</code></td>
+                    <td style="font-weight:600; color:#fff;">${r.patientName}</td>
+                    <td><span class="badge badge-danger">${r.bloodType}${r.rhFactor}</span></td>
+                    <td><strong>${r.unitsNeeded}</strong></td>
+                    <td><span class="badge ${r.urgency === 'critical' ? 'badge-danger' : 'badge-warning'}">${(r.urgency || 'routine').toUpperCase()}</span></td>
+                    <td>${acceptedBadge}</td>
+                    <td><span class="badge ${statusBadgeClass}">${statusText}</span></td>
+                    <td>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            ${(r.status === 'accepted' || r.status === 'completed' || r.assignedDonorId > 0 || r.acceptedUnits > 0) ? `
+                                <button class="btn btn-primary btn-sm" onclick="openViewDonorsModal(${r.id})"><i class="fa-solid fa-id-card"></i> View Donor Profile</button>
+                            ` : `
+                                <button class="btn btn-secondary btn-sm" onclick="openViewDonorsModal(${r.id})"><i class="fa-solid fa-eye"></i> View Donors</button>
+                            `}
+                            ${(r.status !== 'completed' && r.status !== 'cancelled' && (r.acceptedUnits > 0 || (r.acceptedDonorIds && r.acceptedDonorIds.length > 0) || r.assignedDonorId > 0)) ? `
+                                <button class="btn btn-success btn-sm" onclick="openCompleteModal(${r.id})"><i class="fa-solid fa-check-double"></i> Complete</button>
+                            ` : ''}
+                            ${r.status === 'pending' || r.status === 'matching' ? `
+                                <button class="btn btn-danger btn-sm" onclick="cancelRequest(${r.id})"><i class="fa-solid fa-ban"></i> Cancel</button>
+                            ` : ''}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function openViewDonorsModal(reqId) {
+            const req = allRequests.find(x => x.id === reqId);
+            if (!req) return;
+
+            const modalBody = document.getElementById('donors-modal-body');
+            modalBody.innerHTML = '';
+
+            const matchedIds = req.matchedDonorIds ? req.matchedDonorIds.split(',').map(x => parseInt(x.trim())).filter(Boolean) : [];
+            const acceptedIds = new Set(req.acceptedDonorIds ? req.acceptedDonorIds.split(',').map(x => parseInt(x.trim())).filter(Boolean) : []);
+
+            if (matchedIds.length === 0) {
+                modalBody.innerHTML = '<div class="card-panel" style="color:var(--text-muted);">No matched donors found for this request.</div>';
+            } else {
+                matchedIds.forEach(did => {
+                    const d = allDonors.find(x => x.id === did);
+                    if (!d) return;
+
+                    const isAccepted = acceptedIds.has(d.id);
+                    const card = document.createElement('div');
+                    card.className = 'card-panel';
+                    card.style.marginBottom = '12px';
+                    card.style.borderLeft = isAccepted ? '4px solid var(--success)' : '4px solid var(--border-color)';
+
+                    if (isAccepted) {
+                        const isAvail = (d.available !== false && d.isAvailable !== false);
+                        const emailStr = d.email || (d.name.toLowerCase().replace(/\s+/g, '') + '@mail.lk');
+                        card.innerHTML = `
+                            <div>
+                                <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:8px; margin-bottom:12px;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <h4 style="font-size:16px; font-weight:700; color:#fff;">${d.name}</h4>
+                                        <span class="badge badge-success"><i class="fa-solid fa-check-circle"></i> Assigned Donor</span>
+                                        <span class="badge badge-danger">${d.bloodType}${d.rhFactor}</span>
+                                    </div>
+                                    <span class="badge ${isAvail ? 'badge-success' : 'badge-secondary'}">${isAvail ? 'AVAILABLE' : 'UNAVAILABLE'}</span>
+                                </div>
+                                <div style="font-size:13px; color:var(--text-main); display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                    <div><i class="fa-solid fa-user" style="color:var(--primary); margin-right:6px;"></i> <strong>Full Name:</strong> ${d.name}</div>
+                                    <div><i class="fa-solid fa-droplet" style="color:var(--danger); margin-right:6px;"></i> <strong>Blood Group:</strong> ${d.bloodType}${d.rhFactor}</div>
+                                    <div><i class="fa-solid fa-phone" style="color:var(--success); margin-right:6px;"></i> <strong>Phone:</strong> ${d.phone || 'N/A'}</div>
+                                    <div><i class="fa-solid fa-envelope" style="color:var(--info); margin-right:6px;"></i> <strong>Email:</strong> ${emailStr}</div>
+                                    <div><i class="fa-solid fa-location-dot" style="color:var(--warning); margin-right:6px;"></i> <strong>City / District:</strong> ${d.city || 'N/A'}</div>
+                                    <div><i class="fa-solid fa-map-pin" style="color:var(--accent); margin-right:6px;"></i> <strong>Address:</strong> ${d.address || 'N/A'}</div>
+                                    <div><i class="fa-solid fa-venus-mars" style="color:var(--primary); margin-right:6px;"></i> <strong>Gender:</strong> ${d.gender || 'N/A'}</div>
+                                    <div><i class="fa-solid fa-cake-candles" style="color:var(--info); margin-right:6px;"></i> <strong>Age:</strong> ${d.age || 'N/A'} yrs</div>
+                                    <div><i class="fa-solid fa-hand-holding-droplet" style="color:var(--success); margin-right:6px;"></i> <strong>Total Donations:</strong> ${d.totalDonations || 0}</div>
+                                    <div><i class="fa-solid fa-calendar-check" style="color:var(--warning); margin-right:6px;"></i> <strong>Last Donation:</strong> ${d.lastDonationDate || 'Never'}</div>
+                                </div>
+                                <div style="margin-top:12px; font-size:12px; background:var(--bg-darker); padding:8px 12px; border-radius:6px; color:var(--text-muted); display:flex; align-items:center; justify-content:space-between;">
+                                    <span><i class="fa-solid fa-phone-volume" style="color:var(--success); margin-right:6px;"></i> You can use the donor's contact details to arrange donation.</span>
+                                    <a href="tel:${d.phone}" class="btn btn-primary btn-sm" style="font-size:11px;"><i class="fa-solid fa-phone"></i> Call Donor</a>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        card.innerHTML = `
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <h4 style="font-size:15px; font-weight:600; color:var(--text-muted);">${d.name}</h4>
+                                        <span class="badge badge-warning"><i class="fa-solid fa-clock"></i> Response Pending</span>
+                                        <span class="badge badge-secondary">${d.bloodType}${d.rhFactor}</span>
+                                    </div>
+                                    <p style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                                        <i class="fa-solid fa-lock" style="margin-right:4px;"></i> Contact profile locked until donor accepts request.
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    modalBody.appendChild(card);
+                });
+            }
+
+            openModal('view-donors-modal');
+        }
+
+        function openCompleteModal(reqId) {
+            const req = allRequests.find(x => x.id === reqId);
+            if (!req) return;
+
+            document.getElementById('complete-req-id').value = req.id;
+            document.getElementById('complete-req-ref').innerText = '#' + req.id + ' (' + req.bloodType + req.rhFactor + ')';
+            document.getElementById('complete-hospitalNote').value = 'Donation successfully completed. Donor arrived on time.';
+            openModal('complete-donation-modal');
+        }
+
+        async function handleCompleteDonation(e) {
+            e.preventDefault();
+            const reqId = document.getElementById('complete-req-id').value;
+            const hospitalNote = document.getElementById('complete-hospitalNote').value;
+
+            const res = await apiPost('BloodRequestServlet', {
+                action: 'complete',
+                id: reqId,
+                hospitalNote: hospitalNote
+            });
+
+            if (res && res.success) {
+                showToast(res.message, 'success');
+                closeModal('complete-donation-modal');
+                loadHospitalRequests();
+            } else {
+                showToast(res ? res.message : 'Failed to complete donation', 'error');
+            }
+        }
+
+        async function submitBloodRequestForm() {
+            const patientNameEl = document.getElementById('req-patientName');
+            const phoneEl = document.getElementById('req-phone');
+
+            const patientName = patientNameEl ? patientNameEl.value.trim() : '';
+            const phone = phoneEl ? phoneEl.value.trim() : '';
+
+            if (!patientName) {
+                showToast('Please enter the patient name.', 'error');
+                if (patientNameEl) patientNameEl.focus();
+                return;
+            }
+
+            if (!phone) {
+                showToast('Please enter the contact phone number.', 'error');
+                if (phoneEl) phoneEl.focus();
+                return;
+            }
+
+            if (!currentHospital) {
+                const dashData = await apiGet('DashboardServlet?action=hospital');
+                if (dashData && dashData.hospital) {
+                    currentHospital = dashData.hospital;
+                } else {
+                    currentHospital = { id: 1, name: 'Hospital', city: 'Colombo', approvalStatus: 'approved' };
+                }
+            }
+
+            const data = {
+                action: 'add',
+                hospitalId: currentHospital.id || 1,
+                hospitalName: currentHospital.name || 'Hospital',
+                city: currentHospital.city || 'Colombo',
+                patientName: patientName,
+                bloodType: document.getElementById('req-bloodType').value,
+                rhFactor: document.getElementById('req-rhFactor').value,
+                unitsNeeded: document.getElementById('req-unitsNeeded').value || 1,
+                urgency: document.getElementById('req-urgency').value || 'routine',
+                contactPerson: (document.getElementById('req-contactPerson').value || '').trim(),
+                phone: phone,
+                notes: (document.getElementById('req-notes').value || '').trim()
+            };
+
+            const submitBtn = document.getElementById('btn-submit-create-request');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting & Broadcasting...';
+            }
+
+            try {
+                const res = await apiPost('BloodRequestServlet', data);
+                if (res && res.success) {
+                    showToast(res.message || 'Blood request created and broadcast directly to matching donors!', 'success');
+                    closeModal('create-request-modal');
+                    const form = document.getElementById('form-create-request');
+                    if (form) form.reset();
+                    await loadHospitalRequests();
+                } else {
+                    showToast(res ? res.message : 'Failed to submit request', 'error');
+                }
+            } catch (err) {
+                showToast('Error submitting request: ' + err.message, 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit & Broadcast to Matching Donors';
+                }
+            }
+        }
+
+        async function handleCreateRequest(e) {
+            if (e) e.preventDefault();
+            await submitBloodRequestForm();
+            return false;
+        }
+
+        async function cancelRequest(id) {
+            if (!confirm('Cancel this blood request?')) return;
+            const res = await apiPost('BloodRequestServlet', { action: 'cancel', id: id });
+            if (res && res.success) {
+                showToast('Request cancelled', 'info');
+                loadHospitalRequests();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadHospitalRequests);
+    </script>
+</body>
+</html>
