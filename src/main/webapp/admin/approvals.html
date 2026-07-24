@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approvals — HemoLink Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Admin Panel</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Overview</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+
+            <div class="menu-category">Management</div>
+            <a href="users.html" class="menu-item"><i class="fa-solid fa-users"></i> Manage Users</a>
+            <a href="approvals.html" class="menu-item active"><i class="fa-solid fa-user-check"></i> Approvals</a>
+            <a href="hospitals.html" class="menu-item"><i class="fa-solid fa-hospital"></i> Hospitals</a>
+
+            <div class="menu-category">Operations</div>
+            <a href="blood-stock.html" class="menu-item"><i class="fa-solid fa-boxes-stacked"></i> Inventory</a>
+
+            <div class="menu-category">System</div>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donation History</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+            <a href="settings.html" class="menu-item"><i class="fa-solid fa-gear"></i> Settings</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>admin</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Approvals</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="notifications.html" class="notif-bell" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <!-- Donor Registrations Section -->
+            <div style="margin-bottom: 32px;">
+                <div class="panel-title" style="margin-bottom: 16px; font-size:16px;">
+                    <i class="fa-solid fa-user-plus" style="color:var(--warning); margin-right:8px;"></i>
+                    Donor Registrations (<span id="donor-count">0</span>)
+                </div>
+                <div id="donor-approvals-list">
+                    <!-- Cards populated via JS -->
+                </div>
+            </div>
+
+            <!-- Hospital Registrations Section -->
+            <div>
+                <div class="panel-title" style="margin-bottom: 16px; font-size:16px;">
+                    <i class="fa-solid fa-hospital" style="color:var(--info); margin-right:8px;"></i>
+                    Hospital Registrations (<span id="hosp-count">0</span>)
+                </div>
+                <div id="hosp-approvals-list">
+                    <!-- Cards populated via JS -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        // ─── Load & render all awaiting approvals ────────────────────────────────
+        async function loadApprovals() {
+            const donors    = await apiGet('DonorServlet?action=awaiting');
+            const hospitals = await apiGet('HospitalServlet?action=awaiting');
+
+            document.getElementById('donor-count').innerText = donors    ? donors.length    : 0;
+            document.getElementById('hosp-count').innerText  = hospitals ? hospitals.length : 0;
+
+            // ── Donor cards ──
+            const donorList = document.getElementById('donor-approvals-list');
+            donorList.innerHTML = '';
+            if (!donors || donors.length === 0) {
+                donorList.innerHTML = '<div class="card-panel" style="color:var(--text-muted);">No pending donor approval requests.</div>';
+            } else {
+                donors.forEach(d => {
+                    const initials = d.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    // userId is ALWAYS unique — one per user account registration
+                    // Use it as the action key to avoid duplicate-id collisions in localStorage
+                    const actionKey = d.userId || d.id;
+
+                    const card = document.createElement('div');
+                    card.className = 'card-panel';
+                    card.style.cssText = 'margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;';
+                    card.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:16px; flex:1;">
+                            <div class="user-avatar" style="background:#282315; color:#f59e0b; font-weight:700; width:42px; height:42px; font-size:14px;">${initials}</div>
+                            <div>
+                                <h3 style="font-size:16px; font-weight:700; color:#fff;">${d.name}</h3>
+                                <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                                    ${d.bloodType}${d.rhFactor} &mdash; ${d.age}y ${d.gender} &mdash; ${d.city} &mdash; ${d.phone}
+                                </p>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-success" onclick="approveDonor(${actionKey})"><i class="fa-solid fa-check"></i> Approve</button>
+                            <button class="btn btn-danger"  onclick="rejectDonor(${actionKey})"><i class="fa-solid fa-xmark"></i> Reject</button>
+                        </div>
+                    `;
+                    donorList.appendChild(card);
+                });
+            }
+
+            // ── Hospital cards ──
+            const hospList = document.getElementById('hosp-approvals-list');
+            hospList.innerHTML = '';
+            if (!hospitals || hospitals.length === 0) {
+                hospList.innerHTML = '<div class="card-panel" style="color:var(--text-muted);">No pending hospital approval requests.</div>';
+            } else {
+                hospitals.forEach(h => {
+                    const actionKey = h.userId || h.id;
+
+                    const card = document.createElement('div');
+                    card.className = 'card-panel';
+                    card.style.cssText = 'margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;';
+                    card.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:16px; flex:1;">
+                            <div class="user-avatar" style="background:#0c2a38; color:#06b6d4; font-weight:700; width:42px; height:42px; font-size:16px;"><i class="fa-solid fa-hospital"></i></div>
+                            <div>
+                                <h3 style="font-size:16px; font-weight:700; color:#fff;">${h.name}</h3>
+                                <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                                    ${h.type} &mdash; ${h.city} &mdash; ${h.license}
+                                </p>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-success" onclick="approveHospital(${actionKey})"><i class="fa-solid fa-check"></i> Approve</button>
+                            <button class="btn btn-danger"  onclick="rejectHospital(${actionKey})"><i class="fa-solid fa-xmark"></i> Reject</button>
+                        </div>
+                    `;
+                    hospList.appendChild(card);
+                });
+            }
+        }
+
+        // ─── Primary persistence: match by userId (always unique per registration) ─
+        // This runs BEFORE any API call, so the UI is always consistent even in
+        // static-file (Apache-only) mode where no servlet is available.
+
+        function persistDonorStatus(userId, newStatus) {
+            let donors  = JSON.parse(localStorage.getItem('hemolink_donors') || '[]');
+            let updated = false;
+            donors.forEach(d => {
+                if (String(d.userId) === String(userId) && d.approvalStatus === 'awaiting') {
+                    d.approvalStatus = newStatus;
+                    updated = true;
+                }
+            });
+            if (updated) localStorage.setItem('hemolink_donors', JSON.stringify(donors));
+            return updated;
+        }
+
+        function persistHospitalStatus(userId, newStatus) {
+            let hospitals = JSON.parse(localStorage.getItem('hemolink_hospitals') || '[]');
+            let updated   = false;
+            hospitals.forEach(h => {
+                if (String(h.userId) === String(userId) && h.approvalStatus === 'awaiting') {
+                    h.approvalStatus = newStatus;
+                    updated = true;
+                }
+            });
+            if (updated) localStorage.setItem('hemolink_hospitals', JSON.stringify(hospitals));
+            return updated;
+        }
+
+        // Helper: get the DB-row id for a given userId (needed by Java servlet)
+        function getDonorIdByUserId(userId) {
+            const donors = JSON.parse(localStorage.getItem('hemolink_donors') || '[]');
+            const found  = donors.find(d => String(d.userId) === String(userId));
+            return found ? found.id : userId;
+        }
+        function getHospitalIdByUserId(userId) {
+            const hospitals = JSON.parse(localStorage.getItem('hemolink_hospitals') || '[]');
+            const found     = hospitals.find(h => String(h.userId) === String(userId));
+            return found ? found.id : userId;
+        }
+
+        // ─── Approve / Reject handlers ────────────────────────────────────────────
+
+        async function approveDonor(userId) {
+            // 1. Write to localStorage first — guaranteed to work, no ID collision
+            if (!persistDonorStatus(userId, 'approved')) {
+                showToast('Donor not found or already processed.', 'error');
+                return;
+            }
+            // 2. Toast + UI refresh immediately
+            showToast('Donor approved successfully', 'success');
+            loadApprovals();
+            // 3. Fire API call for real-DB persistence (when Tomcat is running)
+            try { await apiPost('DonorServlet', { action: 'approve', id: getDonorIdByUserId(userId) }); } catch (_) {}
+        }
+
+        async function rejectDonor(userId) {
+            if (!persistDonorStatus(userId, 'rejected')) {
+                showToast('Donor not found or already processed.', 'error');
+                return;
+            }
+            showToast('Donor rejected', 'info');
+            loadApprovals();
+            try { await apiPost('DonorServlet', { action: 'reject', id: getDonorIdByUserId(userId) }); } catch (_) {}
+        }
+
+        async function approveHospital(userId) {
+            if (!persistHospitalStatus(userId, 'approved')) {
+                showToast('Hospital not found or already processed.', 'error');
+                return;
+            }
+            showToast('Hospital approved successfully', 'success');
+            loadApprovals();
+            try { await apiPost('HospitalServlet', { action: 'approve', id: getHospitalIdByUserId(userId) }); } catch (_) {}
+        }
+
+        async function rejectHospital(userId) {
+            if (!persistHospitalStatus(userId, 'rejected')) {
+                showToast('Hospital not found or already processed.', 'error');
+                return;
+            }
+            showToast('Hospital rejected', 'info');
+            loadApprovals();
+            try { await apiPost('HospitalServlet', { action: 'reject', id: getHospitalIdByUserId(userId) }); } catch (_) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', loadApprovals);
+    </script>
+</body>
+</html>

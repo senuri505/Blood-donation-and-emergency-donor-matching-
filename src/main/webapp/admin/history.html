@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donation History — HemoLink Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Admin Panel</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Overview</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+
+            <div class="menu-category">Management</div>
+            <a href="users.html" class="menu-item"><i class="fa-solid fa-users"></i> Manage Users</a>
+            <a href="approvals.html" class="menu-item"><i class="fa-solid fa-user-check"></i> Approvals</a>
+            <a href="hospitals.html" class="menu-item"><i class="fa-solid fa-hospital"></i> Hospitals</a>
+
+            <div class="menu-category">Operations</div>
+            <a href="blood-stock.html" class="menu-item"><i class="fa-solid fa-boxes-stacked"></i> Inventory</a>
+
+            <div class="menu-category">System</div>
+            <a href="history.html" class="menu-item active"><i class="fa-solid fa-clock-rotate-left"></i> Donation History</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+            <a href="settings.html" class="menu-item"><i class="fa-solid fa-gear"></i> Settings</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>admin</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Audit Donation History</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="notifications.html" class="notif-bell" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel">
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>LOG ID</th>
+                                <th>DONOR NAME</th>
+                                <th>BLOOD GROUP</th>
+                                <th>VOLUME</th>
+                                <th>LOCATION</th>
+                                <th>TIMESTAMP</th>
+                                <th>AUDIT NOTES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../js/script.js"></script>
+    <script>
+        async function loadHistory() {
+            const list = await apiGet('DonationServlet');
+            const tbody = document.getElementById('history-body');
+            tbody.innerHTML = '';
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No history records logged.</td></tr>';
+                return;
+            }
+
+            list.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><code>#DON-${d.id}</code></td>
+                    <td style="font-weight:600; color:#fff;">${d.donorName}</td>
+                    <td><span class="badge badge-danger">${d.bloodType}${d.rhFactor}</span></td>
+                    <td>${d.volumeMl} ml</td>
+                    <td>${d.hospitalName || 'Central Blood Bank'}</td>
+                    <td style="color:var(--text-muted);">${d.donatedAt ? d.donatedAt.substring(0,19) : '—'}</td>
+                    <td style="color:var(--text-muted);">${d.notes || 'Routine donation log'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', loadHistory);
+    </script>
+</body>
+</html>
