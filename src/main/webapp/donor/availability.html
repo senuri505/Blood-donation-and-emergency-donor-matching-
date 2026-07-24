@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Availability Status — HemoLink Donor</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Donor Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="profile.html" class="menu-item"><i class="fa-solid fa-id-card"></i> My Profile</a>
+            <a href="availability.html" class="menu-item active"><i class="fa-solid fa-toggle-on"></i> Availability Status</a>
+            <a href="requests.html" class="menu-item"><i class="fa-solid fa-hand-holding-heart"></i> Matched Requests</a>
+            <a href="history.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> My Donations</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" id="donor-avatar">KP</div>
+                <div class="user-details">
+                    <h4 id="donor-sidebar-name">Kasun Perera</h4>
+                    <p id="donor-sidebar-group">O-</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Availability Status</h1>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel" style="width:100%; text-align:center; padding:60px 24px;">
+                <div id="avail-icon" style="font-size:48px; color:var(--success); margin-bottom:16px;">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h2 id="avail-text" style="font-size:24px; color:#fff; margin-bottom:8px;">You are currently AVAILABLE</h2>
+                <p style="color:var(--text-muted); font-size:14px; margin-bottom:28px;">
+                    When set to Available, your profile is eligible for automatic matching with urgent hospital blood requests in your city.
+                </p>
+
+                <button id="btn-toggle-avail" class="btn btn-primary" style="padding:14px 28px; font-size:15px;" onclick="toggleAvailability()">
+                    Toggle Status
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        let currentAvailable = true;
+
+        async function loadAvailability() {
+            const data = await apiGet('DashboardServlet?action=donor');
+            if (!data || !data.donor) return;
+
+            updateDonorSidebar(data.donor);
+            currentAvailable = data.donor.isAvailable;
+            updateUI();
+        }
+
+        function updateUI() {
+            const icon = document.getElementById('avail-icon');
+            const text = document.getElementById('avail-text');
+            const btn = document.getElementById('btn-toggle-avail');
+
+            if (currentAvailable) {
+                icon.style.color = 'var(--success)';
+                icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+                text.innerText = 'You are currently AVAILABLE';
+                btn.className = 'btn btn-danger';
+                btn.innerText = 'Set to UNAVAILABLE';
+            } else {
+                icon.style.color = 'var(--danger)';
+                icon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+                text.innerText = 'You are currently UNAVAILABLE';
+                btn.className = 'btn btn-success';
+                btn.innerText = 'Set to AVAILABLE';
+            }
+        }
+
+        async function toggleAvailability() {
+            const res = await apiPost('DonorServlet', { action: 'toggleAvailability' });
+            if (res && res.success) {
+                currentAvailable = res.available;
+                showToast(res.message, 'success');
+                updateUI();
+            } else {
+                showToast('Failed to toggle status', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadAvailability);
+    </script>
+</body>
+</html>

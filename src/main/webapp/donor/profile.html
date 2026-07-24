@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile — HemoLink Donor</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Donor Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="profile.html" class="menu-item active"><i class="fa-solid fa-id-card"></i> My Profile</a>
+            <a href="availability.html" class="menu-item"><i class="fa-solid fa-toggle-on"></i> Availability Status</a>
+            <a href="requests.html" class="menu-item"><i class="fa-solid fa-hand-holding-heart"></i> Matched Requests</a>
+            <a href="history.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> My Donations</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" id="donor-avatar">KP</div>
+                <div class="user-details">
+                    <h4 id="donor-sidebar-name">Kasun Perera</h4>
+                    <p id="donor-sidebar-group">O-</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>My Profile</h1>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel" style="max-width:650px;">
+                <form id="form-donor-profile" onsubmit="handleUpdateProfile(event)">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="prof-name" class="form-control" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Blood Group (Read-Only)</label>
+                            <input type="text" id="prof-bloodGroup" class="form-control" readonly style="background:rgba(255,255,255,0.05); color:var(--primary); font-weight:700;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Age</label>
+                            <input type="number" id="prof-age" class="form-control" required min="18" max="65">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Gender</label>
+                            <select id="prof-gender" class="form-control">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Weight (kg)</label>
+                            <input type="number" id="prof-weight" class="form-control" required min="50">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Phone Number</label>
+                            <input type="text" id="prof-phone" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">City</label>
+                            <input type="text" id="prof-city" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <input type="text" id="prof-address" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Medical Conditions</label>
+                        <textarea id="prof-medical" class="form-control" rows="3" placeholder="Specify any medical conditions"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Update Profile</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        let currentDonorId = null;
+
+        async function loadProfile() {
+            const data = await apiGet('DashboardServlet?action=donor');
+            if (!data || !data.donor) return;
+            const d = data.donor;
+            currentDonorId = d.id;
+
+            const initials = d.name ? d.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'DN';
+            document.getElementById('donor-avatar').innerText = initials;
+            document.getElementById('donor-sidebar-name').innerText = d.name || 'Donor';
+            document.getElementById('donor-sidebar-group').innerText = d.bloodType + d.rhFactor;
+
+            document.getElementById('prof-name').value = d.name || '';
+            document.getElementById('prof-bloodGroup').value = d.bloodType + d.rhFactor;
+            document.getElementById('prof-age').value = d.age || 25;
+            document.getElementById('prof-gender').value = d.gender || 'Male';
+            document.getElementById('prof-weight').value = d.weight || 60;
+            document.getElementById('prof-phone').value = d.phone || '';
+            document.getElementById('prof-city').value = d.city || '';
+            document.getElementById('prof-address').value = d.address || '';
+            document.getElementById('prof-medical').value = d.medicalConditions || 'None';
+        }
+
+        async function handleUpdateProfile(e) {
+            e.preventDefault();
+            const data = {
+                action: 'update',
+                id: currentDonorId,
+                name: document.getElementById('prof-name').value,
+                age: document.getElementById('prof-age').value,
+                gender: document.getElementById('prof-gender').value,
+                weight: document.getElementById('prof-weight').value,
+                phone: document.getElementById('prof-phone').value,
+                city: document.getElementById('prof-city').value,
+                address: document.getElementById('prof-address').value,
+                medicalConditions: document.getElementById('prof-medical').value
+            };
+
+            const res = await apiPost('DonorServlet', data);
+            if (res && res.success) {
+                showToast('Profile updated successfully', 'success');
+            } else {
+                showToast(res ? res.message : 'Update failed', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadProfile);
+    </script>
+</body>
+</html>

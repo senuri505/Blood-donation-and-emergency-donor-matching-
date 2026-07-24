@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matched Requests — HemoLink Donor</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Donor Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="profile.html" class="menu-item"><i class="fa-solid fa-id-card"></i> My Profile</a>
+            <a href="availability.html" class="menu-item"><i class="fa-solid fa-toggle-on"></i> Availability Status</a>
+            <a href="requests.html" class="menu-item active"><i class="fa-solid fa-hand-holding-heart"></i> Matched Requests</a>
+            <a href="history.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> My Donations</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" id="donor-avatar">KP</div>
+                <div class="user-details">
+                    <h4 id="donor-sidebar-name">Kasun Perera</h4>
+                    <p id="donor-sidebar-group">O-</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Matched Requests</h1>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div id="requests-list">
+                <!-- JS populated -->
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        let currentDonorId = null;
+
+        function getDonorResponse(responsesStr, donorId) {
+            if (!responsesStr) return null;
+            const parts = responsesStr.split(';');
+            for (const p of parts) {
+                const kv = p.trim().split(':');
+                if (kv.length === 2) {
+                    const idKey = kv[0].replace('donor_', '').trim();
+                    if (idKey == donorId) return kv[1].trim().toLowerCase();
+                }
+            }
+            return null;
+        }
+
+        async function loadRequests() {
+            const data = await apiGet('DashboardServlet?action=donor');
+            if (!data || !data.donor) return;
+            updateDonorSidebar(data.donor);
+            currentDonorId = data.donor.id;
+
+            const container = document.getElementById('requests-list');
+            container.innerHTML = '';
+
+            if (!data.donor.isAvailable && data.donor.available !== true) {
+                container.innerHTML = `
+                    <div class="card-panel" style="background:var(--danger-bg); border:1px solid var(--danger); margin-bottom:16px; color:#fff;">
+                        <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger); margin-right:8px;"></i>
+                        Your availability status is currently set to <strong>Unavailable</strong>. <a href="availability.html" style="color:#06b6d4; text-decoration:underline;">Switch status to Available</a> to receive blood request matches.
+                    </div>
+                `;
+            }
+
+            const list = data.matchedRequests || [];
+
+            if (list.length === 0) {
+                container.innerHTML += '<div class="card-panel" style="color:var(--text-muted); text-align:center;">No active matched requests found for your profile.</div>';
+                return;
+            }
+
+            list.forEach(r => {
+                const card = document.createElement('div');
+                card.className = 'card-panel';
+                card.style.marginBottom = '16px';
+                card.style.borderLeft = '4px solid var(--primary)';
+
+                const myResp = getDonorResponse(r.donorResponses, currentDonorId);
+                const assignedId = r.assignedDonorId || 0;
+                const isAssignedToMe = (assignedId === currentDonorId) || (myResp === 'accept' && (r.status === 'accepted' || r.status === 'fulfilled'));
+                const isTakenByOther = (assignedId > 0 && assignedId !== currentDonorId) || ((r.status === 'accepted' || r.status === 'fulfilled') && !isAssignedToMe) || (r.status === 'completed');
+
+                let actionHtml = '';
+                if (isAssignedToMe) {
+                    actionHtml = `
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="badge badge-success" style="font-size:13px; padding:8px 14px;"><i class="fa-solid fa-circle-check"></i> Accepted & Assigned to You</span>
+                        </div>
+                    `;
+                } else if (isTakenByOther) {
+                    actionHtml = `
+                        <div style="background:var(--bg-darker); border:1px solid var(--border-color); padding:10px 14px; border-radius:6px; color:var(--text-muted); font-size:13px;">
+                            <i class="fa-solid fa-lock" style="color:var(--warning); margin-right:6px;"></i> This request has already been accepted by another donor.
+                        </div>
+                    `;
+                } else if (myResp === 'decline') {
+                    actionHtml = `
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="badge badge-danger" style="font-size:13px; padding:6px 12px;"><i class="fa-solid fa-circle-xmark"></i> You Declined</span>
+                            <button class="btn btn-success btn-sm" onclick="respond(${r.id}, 'accept')"><i class="fa-solid fa-check"></i> Change to Accept</button>
+                        </div>
+                    `;
+                } else {
+                    actionHtml = `
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-success" onclick="respond(${r.id}, 'accept')"><i class="fa-solid fa-circle-check"></i> Accept Request</button>
+                            <button class="btn btn-danger" onclick="respond(${r.id}, 'decline')"><i class="fa-solid fa-circle-xmark"></i> Decline</button>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                                <span class="badge badge-danger" style="font-size:13px;">${r.bloodType}${r.rhFactor}</span>
+                                <span class="badge ${r.urgency === 'critical' ? 'badge-danger' : 'badge-warning'}">${(r.urgency || 'routine').toUpperCase()} URGENCY</span>
+                                <span style="font-size:12px; color:var(--text-muted);">REQ #${r.id}</span>
+                            </div>
+                            <h3 style="font-size:18px; font-weight:700; color:#fff;">${r.hospitalName}</h3>
+                            <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">
+                                Patient: <strong>${r.patientName}</strong> &middot; Units Needed: <strong>${r.unitsNeeded}</strong> &middot; City: ${r.city}
+                            </p>
+                            ${r.notes ? `<p style="color:var(--text-muted); font-size:12px; font-style:italic; margin-top:4px;">Notes: "${r.notes}"</p>` : ''}
+                        </div>
+
+                        ${actionHtml}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function respond(requestId, responseStr) {
+            const res = await apiPost('BloodRequestServlet', {
+                action: 'respond',
+                requestId: requestId,
+                donorId: currentDonorId,
+                response: responseStr
+            });
+            if (res && res.success) {
+                showToast(res.message, 'success');
+                loadRequests();
+            } else if (res && res.isLocked) {
+                showToast(res.message, 'warning');
+                loadRequests();
+            } else {
+                showToast(res ? res.message : 'Response failed', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadRequests);
+    </script>
+</body>
+</html>
