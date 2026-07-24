@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Donation History — HemoLink Donor</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Donor Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="profile.html" class="menu-item"><i class="fa-solid fa-id-card"></i> My Profile</a>
+            <a href="availability.html" class="menu-item"><i class="fa-solid fa-toggle-on"></i> Availability Status</a>
+            <a href="requests.html" class="menu-item"><i class="fa-solid fa-hand-holding-heart"></i> Matched Requests</a>
+            <a href="history.html" class="menu-item active"><i class="fa-solid fa-clock-rotate-left"></i> My Donations</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" id="donor-avatar">KP</div>
+                <div class="user-details">
+                    <h4 id="donor-sidebar-name">Kasun Perera</h4>
+                    <p id="donor-sidebar-group">O-</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>My Personal Donation History</h1>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel">
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>REF ID</th>
+                                <th>DONOR NAME</th>
+                                <th>HOSPITAL NAME</th>
+                                <th>BLOOD GROUP</th>
+                                <th>REQUEST DATE</th>
+                                <th>DONATION DATE</th>
+                                <th>STATUS</th>
+                                <th>HOSPITAL NOTE</th>
+                            </tr>
+                        </thead>
+                        <tbody id="my-history-body">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../js/script.js"></script>
+    <script>
+        async function loadMyHistory() {
+            const data = await apiGet('DashboardServlet?action=donor');
+            if (!data || !data.donor) return;
+
+            updateDonorSidebar(data.donor);
+            const tbody = document.getElementById('my-history-body');
+            tbody.innerHTML = '';
+
+            const list = data.history || [];
+
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No past donation history recorded yet.</td></tr>';
+                return;
+            }
+
+            list.forEach(d => {
+                const tr = document.createElement('tr');
+                const refId = d.referenceId || ('DON-' + d.id);
+                const reqDateStr = d.requestDate ? String(d.requestDate).substring(0, 10) : '2026-07-20';
+                const donDateStr = d.donatedAt ? String(d.donatedAt).substring(0, 10) : '2026-07-22';
+                const statusStr = (d.status || 'completed').toUpperCase();
+                const noteStr = d.hospitalNote || d.notes || 'Donation completed successfully.';
+
+                tr.innerHTML = `
+                    <td><code>${refId}</code></td>
+                    <td style="font-weight:600; color:#fff;">${d.donorName || data.donor.name}</td>
+                    <td>${d.hospitalName || 'Central Blood Bank'}</td>
+                    <td><span class="badge badge-danger">${d.bloodType}${d.rhFactor}</span></td>
+                    <td style="color:var(--text-muted);">${reqDateStr}</td>
+                    <td style="color:var(--text-muted);">${donDateStr}</td>
+                    <td><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> ${statusStr}</span></td>
+                    <td style="color:var(--text-main); font-style:italic;">${noteStr}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadMyHistory);
+    </script>
+</body>
+</html>

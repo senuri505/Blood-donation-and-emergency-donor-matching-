@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — HemoLink</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="auth-wrapper">
+
+    <div class="auth-card">
+        <a href="index.html" class="btn-back-home"><i class="fa-solid fa-arrow-left"></i> Back to Home Page</a>
+
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fa-solid fa-droplet"></i>
+            </div>
+            <h2 style="color:#fff; font-size:24px; font-weight:800; letter-spacing:-0.5px;">HemoLink</h2>
+            <p style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Blood Donor Matching System</p>
+        </div>
+
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')"><i class="fa-solid fa-right-to-bracket"></i> Log In</div>
+            <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')"><i class="fa-solid fa-user-plus"></i> Register</div>
+        </div>
+
+        <!-- Log In Form -->
+        <form id="form-signin" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Username or Email</label>
+                <input type="text" id="login-username" class="form-control" placeholder="Enter username or email" required value="admin">
+            </div>
+            <div class="form-group" style="margin-bottom:24px;">
+                <label class="form-label">Password</label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="login-password" class="form-control" placeholder="Enter password" required value="admin">
+                    <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('login-password', this)" title="Show/Hide password">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:12px; font-size:14px; font-weight:700;"><i class="fa-solid fa-right-to-bracket"></i> Log In</button>
+        </form>
+
+        <!-- Quick Register Form -->
+        <form id="form-register" style="display:none;" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="reg-name" class="form-control" placeholder="Full name" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="reg-email" class="form-control" placeholder="email@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone</label>
+                    <input type="text" id="reg-phone" class="form-control" placeholder="Phone number" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="reg-username" class="form-control" placeholder="Choose username" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="reg-password" class="form-control" placeholder="Choose password" required>
+                        <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('reg-password', this)" title="Show/Hide password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Register As</label>
+                <select id="reg-role" class="form-control" onchange="toggleRegRoleFields()">
+                    <option value="donor">Voluntary Donor</option>
+                    <option value="hospital">Hospital / Medical Facility</option>
+                </select>
+            </div>
+
+            <!-- Donor Fields -->
+            <div id="reg-donor-fields">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Blood Type</label>
+                        <select id="reg-bloodType" class="form-control">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="AB">AB</option>
+                            <option value="O">O</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rh Factor</label>
+                        <select id="reg-rhFactor" class="form-control">
+                            <option value="+">+ Positive</option>
+                            <option value="-">- Negative</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Age</label>
+                        <input type="number" id="reg-age" class="form-control" placeholder="18-65" min="18" max="65" value="25">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <select id="reg-gender" class="form-control">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Weight (kg)</label>
+                        <input type="number" id="reg-weight" class="form-control" placeholder="Min 50" min="50" value="60">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" id="reg-city" class="form-control" placeholder="City" value="Colombo">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hospital Fields -->
+            <div id="reg-hospital-fields" style="display:none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" id="reg-hosp-city" class="form-control" placeholder="City">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">License No.</label>
+                        <input type="text" id="reg-hosp-license" class="form-control" placeholder="SL-2024-xxx">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:12px; font-weight:700; margin-top:10px;"><i class="fa-solid fa-paper-plane"></i> Submit Registration</button>
+        </form>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="js/script.js"></script>
+    <script>
+        function switchAuthTab(tab) {
+            document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
+            document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+            document.getElementById('form-signin').style.display = tab === 'signin' ? 'block' : 'none';
+            document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+        }
+
+        function toggleRegRoleFields() {
+            const role = document.getElementById('reg-role').value;
+            document.getElementById('reg-donor-fields').style.display = role === 'donor' ? 'block' : 'none';
+            document.getElementById('reg-hospital-fields').style.display = role === 'hospital' ? 'block' : 'none';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            const res = await apiPost('LoginServlet', { username: username, password: password });
+            if (res && res.success) {
+                showToast('Login successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = res.redirect;
+                }, 600);
+            } else {
+                showToast(res ? res.message : 'Login failed. Please check credentials.', 'error');
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const role = document.getElementById('reg-role').value;
+            const data = {
+                role: role,
+                name: document.getElementById('reg-name').value,
+                email: document.getElementById('reg-email').value,
+                phone: document.getElementById('reg-phone').value,
+                username: document.getElementById('reg-username').value,
+                password: document.getElementById('reg-password').value
+            };
+
+            if (role === 'donor') {
+                data.bloodType = document.getElementById('reg-bloodType').value;
+                data.rhFactor = document.getElementById('reg-rhFactor').value;
+                data.age = document.getElementById('reg-age').value;
+                data.gender = document.getElementById('reg-gender').value;
+                data.weight = document.getElementById('reg-weight').value;
+                data.city = document.getElementById('reg-city').value;
+            } else {
+                data.city = document.getElementById('reg-hosp-city').value;
+                data.license = document.getElementById('reg-hosp-license').value;
+            }
+
+            const res = await apiPost('RegisterServlet', data);
+            if (res && res.success) {
+                showToast(res.message, 'success');
+                switchAuthTab('signin');
+            } else {
+                showToast(res ? res.message : 'Registration failed.', 'error');
+            }
+        }
+
+        // Auto-switch tabs based on URL parameters (e.g. login.html?tab=register&role=hospital)
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const tab = params.get('tab');
+            const role = params.get('role');
+            if (tab === 'register') {
+                switchAuthTab('register');
+                if (role && (role === 'donor' || role === 'hospital')) {
+                    document.getElementById('reg-role').value = role;
+                    toggleRegRoleFields();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

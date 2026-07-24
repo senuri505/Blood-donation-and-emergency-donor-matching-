@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users — HemoLink Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Admin Panel</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Overview</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+
+            <div class="menu-category">Management</div>
+            <a href="users.html" class="menu-item active"><i class="fa-solid fa-users"></i> Manage Users</a>
+            <a href="approvals.html" class="menu-item"><i class="fa-solid fa-user-check"></i> Approvals</a>
+            <a href="hospitals.html" class="menu-item"><i class="fa-solid fa-hospital"></i> Hospitals</a>
+
+            <div class="menu-category">Operations</div>
+            <a href="blood-stock.html" class="menu-item"><i class="fa-solid fa-boxes-stacked"></i> Inventory</a>
+
+            <div class="menu-category">System</div>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donation History</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+            <a href="settings.html" class="menu-item"><i class="fa-solid fa-gear"></i> Settings</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>admin</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Manage Users</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="notifications.html" class="notif-bell" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel">
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>USER</th>
+                                <th>ROLE</th>
+                                <th>STATUS</th>
+                                <th>PHONE</th>
+                                <th>JOINED</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        async function loadUsers() {
+            // Fetch users & donors & hospitals
+            const users = await apiGet('DonorServlet?action=listUsers');
+            const donors = await apiGet('DonorServlet?action=list');
+            const hospitals = await apiGet('HospitalServlet?action=list');
+
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+
+            // Combine into unified view
+            const donorMap = {};
+            donors.forEach(d => donorMap[d.userId] = d);
+
+            const hospitalMap = {};
+            hospitals.forEach(h => hospitalMap[h.userId] = h);
+
+            // Fetch all users list directly
+            const allUsers = await fetchAllUsers();
+
+            allUsers.forEach(u => {
+                const tr = document.createElement('tr');
+
+                // User details
+                let status = 'APPROVED';
+                let statusClass = 'badge-success';
+                let roleIcon = 'fa-user';
+
+                if (u.role === 'donor') {
+                    roleIcon = 'fa-user';
+                    const d = donorMap[u.id];
+                    if (d) {
+                        status = (d.approvalStatus || 'approved').toUpperCase();
+                    }
+                } else if (u.role === 'hospital') {
+                    roleIcon = 'fa-hospital';
+                    const h = hospitalMap[u.id];
+                    if (h) {
+                        status = (h.approvalStatus || 'approved').toUpperCase();
+                    }
+                } else if (u.role === 'admin') {
+                    roleIcon = 'fa-user-shield';
+                }
+
+                if (status === 'AWAITING') statusClass = 'badge-warning';
+                if (status === 'REJECTED') statusClass = 'badge-danger';
+
+                // Initial Avatar
+                const initials = u.name ? u.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : 'U';
+
+                tr.innerHTML = `
+                    <td>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div class="user-avatar" style="background:#1c233a; color:#10b981; font-weight:700;">${initials}</div>
+                            <div>
+                                <div style="font-weight:600; color:#fff;">${u.name}</div>
+                                <div style="font-size:11px; color:var(--text-muted);">${u.username}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="color:var(--text-muted); font-size:13px;"><i class="fa-solid ${roleIcon}"></i> ${u.role}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${statusClass}">${status}</span>
+                    </td>
+                    <td style="color:var(--text-muted);">${u.phone || '—'}</td>
+                    <td style="color:var(--text-muted); font-size:12px;">${u.createdAt ? u.createdAt.substring(0,10) : '2026-07-20'}</td>
+                    <td>
+                        ${u.role !== 'admin' ? `
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.donorId || u.hospitalId || u.id}, '${u.role}', ${u.id})" title="Delete User">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        ` : '—'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function fetchAllUsers() {
+            try {
+                // Fetch donors & hospitals & admin
+                const donors = await apiGet('DonorServlet?action=list');
+                const hospitals = await apiGet('HospitalServlet?action=list');
+                
+                const users = [
+                    { id: 1, name: 'System Admin', username: 'admin', role: 'admin', phone: '9000000001', createdAt: '2026-06-19' }
+                ];
+
+                donors.forEach(d => {
+                    users.push({
+                        id: d.userId || d.id,
+                        donorId: d.id,
+                        name: d.name,
+                        username: 'donor' + d.id,
+                        role: 'donor',
+                        phone: d.phone,
+                        createdAt: '2026-06-19'
+                    });
+                });
+
+                hospitals.forEach(h => {
+                    users.push({
+                        id: h.userId || h.id,
+                        hospitalId: h.id,
+                        name: h.name,
+                        username: 'hosp' + h.id,
+                        role: 'hospital',
+                        phone: '—',
+                        createdAt: '2026-06-19'
+                    });
+                });
+
+                return users;
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function deleteUser(id, role, userId) {
+            if (!confirm('Are you sure you want to delete this user record?')) return;
+            let res;
+            if (role === 'donor') {
+                res = await apiPost('DonorServlet', { action: 'delete', id: id, userId: userId });
+            } else if (role === 'hospital') {
+                res = await apiPost('HospitalServlet', { action: 'delete', id: id, userId: userId });
+            }
+            if (res && res.success) {
+                showToast(res.message || 'User deleted successfully', 'success');
+                loadUsers();
+            } else {
+                showToast(res ? res.message : 'Delete failed', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadUsers);
+    </script>
+</body>
+</html>

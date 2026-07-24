@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospitals — HemoLink Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Admin Panel</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Overview</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+
+            <div class="menu-category">Management</div>
+            <a href="users.html" class="menu-item"><i class="fa-solid fa-users"></i> Manage Users</a>
+            <a href="approvals.html" class="menu-item"><i class="fa-solid fa-user-check"></i> Approvals</a>
+            <a href="hospitals.html" class="menu-item active"><i class="fa-solid fa-hospital"></i> Hospitals</a>
+
+            <div class="menu-category">Operations</div>
+            <a href="blood-stock.html" class="menu-item"><i class="fa-solid fa-boxes-stacked"></i> Inventory</a>
+
+            <div class="menu-category">System</div>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donation History</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+            <a href="settings.html" class="menu-item"><i class="fa-solid fa-gear"></i> Settings</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>admin</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Hospitals Directory</h1>
+            </div>
+            <div class="topbar-actions">
+                <button class="btn btn-primary btn-sm" onclick="openModal('add-hosp-modal')"><i class="fa-solid fa-plus"></i> Add Hospital</button>
+                <a href="notifications.html" class="notif-bell" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel">
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>HOSPITAL NAME</th>
+                                <th>TYPE</th>
+                                <th>CITY</th>
+                                <th>LICENSE</th>
+                                <th>ADDRESS</th>
+                                <th>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hosp-table-body">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Add Hospital -->
+    <div class="modal-overlay" id="add-hosp-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title">Add New Hospital</div>
+                <button class="modal-close" onclick="closeModal('add-hosp-modal')">&times;</button>
+            </div>
+            <form id="form-add-hosp" onsubmit="handleAddHospital(event)">
+                <div class="form-group">
+                    <label class="form-label">Hospital Name</label>
+                    <input type="text" id="add-hname" class="form-control" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">City</label>
+                        <input type="text" id="add-hcity" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select id="add-htype" class="form-control">
+                            <option value="Government">Government</option>
+                            <option value="Private">Private</option>
+                            <option value="Non-Profit">Non-Profit</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">License Number</label>
+                    <input type="text" id="add-hlicense" class="form-control" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="add-husername" class="form-control" placeholder="Hospital username" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" id="add-hpassword" class="form-control" placeholder="Hospital password" required>
+                            <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('add-hpassword', this)" title="Show/Hide password">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <input type="text" id="add-haddress" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">Add Hospital</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        async function loadHospitals() {
+            const list = await apiGet('HospitalServlet?action=list');
+            const tbody = document.getElementById('hosp-table-body');
+            tbody.innerHTML = '';
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hospitals registered.</td></tr>';
+                return;
+            }
+
+            list.forEach(h => {
+                const tr = document.createElement('tr');
+                const statusClass = h.approvalStatus === 'approved' ? 'badge-success' : (h.approvalStatus === 'awaiting' ? 'badge-warning' : 'badge-danger');
+
+                tr.innerHTML = `
+                    <td style="font-weight:600; color:#fff;">${h.name}</td>
+                    <td>${h.type || 'Private'}</td>
+                    <td>${h.city}</td>
+                    <td><code style="color:var(--info);">${h.license}</code></td>
+                    <td style="color:var(--text-muted);">${h.address || '—'}</td>
+                    <td><span class="badge ${statusClass}">${(h.approvalStatus || 'approved').toUpperCase()}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function handleAddHospital(e) {
+            e.preventDefault();
+            const data = {
+                role: 'hospital',
+                name: document.getElementById('add-hname').value,
+                city: document.getElementById('add-hcity').value,
+                type: document.getElementById('add-htype').value,
+                license: document.getElementById('add-hlicense').value,
+                address: document.getElementById('add-haddress').value,
+                username: document.getElementById('add-husername').value,
+                password: document.getElementById('add-hpassword').value
+            };
+
+            const res = await apiPost('RegisterServlet', data);
+            if (res && res.success) {
+                showToast('Hospital added successfully', 'success');
+                closeModal('add-hosp-modal');
+                loadHospitals();
+            } else {
+                showToast(res ? res.message : 'Error adding hospital', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadHospitals);
+    </script>
+</body>
+</html>

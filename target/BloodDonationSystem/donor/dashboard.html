@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Portal — HemoLink</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Donor Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item active"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="profile.html" class="menu-item"><i class="fa-solid fa-id-card"></i> My Profile</a>
+            <a href="availability.html" class="menu-item"><i class="fa-solid fa-toggle-on"></i> Availability Status</a>
+            <a href="requests.html" class="menu-item"><i class="fa-solid fa-hand-holding-heart"></i> Matched Requests</a>
+            <a href="history.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> My Donations</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" id="donor-avatar">KP</div>
+                <div class="user-details">
+                    <h4 id="donor-sidebar-name">Kasun Perera</h4>
+                    <p id="donor-sidebar-group">O-</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Donor Dashboard</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="requests.html" class="notif-bell" title="Matched Requests">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <!-- Welcome Banner -->
+            <div class="card-panel" style="margin-bottom: 24px; background: linear-gradient(135deg, #151a2c 0%, #1f2742 100%);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                    <div>
+                        <h2 style="font-size:22px; color:#fff;" id="welcome-title">Welcome back, Kasun Perera</h2>
+                        <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">
+                            Blood Group: <strong style="color:var(--primary);" id="welcome-group">O-</strong> &middot; 
+                            City: <span id="welcome-city">Colombo</span> &middot; 
+                            Total Donations: <span id="welcome-donations">0</span>
+                        </p>
+                    </div>
+
+                    <!-- Eligibility Status Card -->
+                    <div id="eligibility-badge-box" style="padding:14px 20px; border-radius:8px; background:var(--success-bg); border:1px solid var(--success);">
+                        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--success);" id="eligibility-status-label">Eligibility Status</div>
+                        <div style="font-size:18px; font-weight:700; color:#fff; margin-top:2px;" id="eligibility-status-val">Eligible</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;" id="eligibility-sub-info">Ready to donate</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-label">Status</div>
+                    <div class="stat-card-value" id="card-status" style="color:var(--success);">Available</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Pending Requests</div>
+                    <div class="stat-card-value" id="card-pending">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Total Donations</div>
+                    <div class="stat-card-value" id="card-donations">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Last Donation</div>
+                    <div class="stat-card-value" id="card-last-donation" style="font-size:18px;">Never</div>
+                </div>
+            </div>
+
+            <!-- Matched Blood Requests Requiring Action -->
+            <div class="card-panel" style="margin-bottom:28px;">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="fa-solid fa-heart-pulse" style="color:var(--primary);"></i> Matched Blood Requests Requiring Response</div>
+                </div>
+                <div id="matched-requests-container">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        let currentDonor = null;
+
+        async function loadDonorDashboard() {
+            const data = await apiGet('DashboardServlet?action=donor');
+            if (!data || !data.donor) {
+                showToast('Please log in as a donor', 'error');
+                setTimeout(() => window.location.href = '../login.html', 1000);
+                return;
+            }
+
+            currentDonor = data.donor;
+
+            const initials = currentDonor.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('donor-avatar').innerText = initials;
+            document.getElementById('donor-sidebar-name').innerText = currentDonor.name;
+            document.getElementById('donor-sidebar-group').innerText = currentDonor.bloodType + currentDonor.rhFactor;
+
+            document.getElementById('welcome-title').innerText = 'Welcome, ' + currentDonor.name;
+            document.getElementById('welcome-group').innerText = currentDonor.bloodType + currentDonor.rhFactor;
+            document.getElementById('welcome-city').innerText = currentDonor.city || '—';
+            document.getElementById('welcome-donations').innerText = currentDonor.totalDonations || 0;
+
+            document.getElementById('card-status').innerText = currentDonor.isAvailable ? 'Available' : 'Unavailable';
+            document.getElementById('card-status').style.color = currentDonor.isAvailable ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('card-donations').innerText = currentDonor.totalDonations || 0;
+            document.getElementById('card-last-donation').innerText = currentDonor.lastDonationDate || 'Never';
+
+            // Eligibility UI
+            const box = document.getElementById('eligibility-badge-box');
+            const val = document.getElementById('eligibility-status-val');
+            const sub = document.getElementById('eligibility-sub-info');
+
+            if (data.isEligible) {
+                box.style.background = 'var(--success-bg)';
+                box.style.borderColor = 'var(--success)';
+                val.innerText = 'Eligible';
+                val.style.color = 'var(--success)';
+                sub.innerText = 'Next eligible: Today';
+            } else {
+                box.style.background = 'var(--danger-bg)';
+                box.style.borderColor = 'var(--danger)';
+                val.innerText = 'Not Eligible';
+                val.style.color = 'var(--danger)';
+                sub.innerText = data.eligibilityReason || 'Cooldown period active';
+            }
+
+            // Render matched requests
+            const reqContainer = document.getElementById('matched-requests-container');
+            reqContainer.innerHTML = '';
+            const matchedList = data.matchedRequests || [];
+
+            const pendingCount = matchedList.filter(r => r.status === 'matching' || r.status === 'pending').length;
+            document.getElementById('card-pending').innerText = pendingCount;
+
+            if (matchedList.length === 0) {
+                if (!currentDonor.isAvailable) {
+                    reqContainer.innerHTML = '<div style="color:var(--danger); padding:16px 0;"><i class="fa-solid fa-triangle-exclamation"></i> Your availability status is currently set to <strong>Unavailable</strong>. Toggle availability to Available to receive matching requests.</div>';
+                } else {
+                    reqContainer.innerHTML = '<div style="color:var(--text-muted); padding:16px 0;">No active requests currently matched to your profile.</div>';
+                }
+            } else {
+                matchedList.forEach(r => {
+                    const card = document.createElement('div');
+                    card.className = 'card-panel';
+                    card.style.marginBottom = '12px';
+                    card.style.background = 'var(--bg-dark)';
+                    card.style.borderLeft = '4px solid var(--primary)';
+                    card.style.display = 'flex';
+                    card.style.alignItems = 'center';
+                    card.style.justifyContent = 'space-between';
+                    let myResp = null;
+                    if (r.donorResponses) {
+                        const parts = r.donorResponses.split(';');
+                        for (const p of parts) {
+                            const kv = p.trim().split(':');
+                            if (kv.length === 2 && kv[0].replace('donor_', '').trim() == currentDonor.id) {
+                                myResp = kv[1].trim().toLowerCase();
+                            }
+                        }
+                    }
+
+                    const assignedId = r.assignedDonorId || 0;
+                    const isAssignedToMe = (assignedId === currentDonor.id) || (myResp === 'accept' && (r.status === 'accepted' || r.status === 'fulfilled'));
+                    const isTakenByOther = (assignedId > 0 && assignedId !== currentDonor.id) || ((r.status === 'accepted' || r.status === 'fulfilled') && !isAssignedToMe) || (r.status === 'completed');
+
+                    let btnHtml = '';
+                    if (isAssignedToMe) {
+                        btnHtml = '<span class="badge badge-success" style="font-size:12px; padding:6px 10px;"><i class="fa-solid fa-check"></i> Accepted & Assigned to You</span>';
+                    } else if (isTakenByOther) {
+                        btnHtml = '<span class="badge badge-secondary" style="font-size:11px; padding:6px 10px;"><i class="fa-solid fa-lock"></i> Accepted by another donor</span>';
+                    } else if (myResp === 'decline') {
+                        btnHtml = '<span class="badge badge-danger" style="font-size:12px; padding:6px 10px;"><i class="fa-solid fa-xmark"></i> Declined</span>';
+                    } else {
+                        btnHtml = `
+                            <button class="btn btn-success btn-sm" onclick="respondRequest(${r.id}, 'accept')"><i class="fa-solid fa-check"></i> Accept</button>
+                            <button class="btn btn-danger btn-sm" onclick="respondRequest(${r.id}, 'decline')"><i class="fa-solid fa-xmark"></i> Decline</button>
+                        `;
+                    }
+
+                    card.innerHTML = `
+                        <div>
+                            <div style="font-size:16px; font-weight:700; color:#fff;">
+                                Request for <span style="color:var(--primary);">${r.bloodType}${r.rhFactor}</span> at ${r.hospitalName}
+                            </div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                                Patient: ${r.patientName} &middot; Urgency: <strong style="color:var(--warning);">${(r.urgency || 'routine').toUpperCase()}</strong> &middot; Units: ${r.unitsNeeded} &middot; City: ${r.city}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            ${btnHtml}
+                        </div>
+                    `;
+                    reqContainer.appendChild(card);
+                });
+            }
+        }
+
+        async function respondRequest(reqId, responseStr) {
+            const res = await apiPost('BloodRequestServlet', {
+                action: 'respond',
+                requestId: reqId,
+                donorId: currentDonor.id,
+                response: responseStr
+            });
+
+            if (res && res.success) {
+                showToast(res.message, 'success');
+                loadDonorDashboard();
+            } else if (res && res.isLocked) {
+                showToast(res.message, 'warning');
+                loadDonorDashboard();
+            } else {
+                showToast(res ? res.message : 'Response failed', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDonorDashboard);
+    </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Settings — HemoLink Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Admin Panel</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Overview</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+
+            <div class="menu-category">Management</div>
+            <a href="users.html" class="menu-item"><i class="fa-solid fa-users"></i> Manage Users</a>
+            <a href="approvals.html" class="menu-item"><i class="fa-solid fa-user-check"></i> Approvals</a>
+            <a href="hospitals.html" class="menu-item"><i class="fa-solid fa-hospital"></i> Hospitals</a>
+
+            <div class="menu-category">Operations</div>
+            <a href="blood-stock.html" class="menu-item"><i class="fa-solid fa-boxes-stacked"></i> Inventory</a>
+
+            <div class="menu-category">System</div>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donation History</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+            <a href="settings.html" class="menu-item active"><i class="fa-solid fa-gear"></i> Settings</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>admin</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>System Settings</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="notifications.html" class="notif-bell" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel" style="max-width:700px;">
+                <form id="form-settings" onsubmit="handleSaveSettings(event)">
+                    <div class="form-group">
+                        <label class="form-label">System Name</label>
+                        <input type="text" id="set-system_name" name="system_name" class="form-control" value="HemoLink">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Donation Cooldown (Days)</label>
+                            <input type="number" id="set-cooldown_days" name="cooldown_days" class="form-control" value="56">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Blood Unit Expiry (Days)</label>
+                            <input type="number" id="set-expiry_days" name="expiry_days" class="form-control" value="42">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Minimum Donor Weight (kg)</label>
+                            <input type="number" id="set-min_weight" name="min_weight" class="form-control" value="50">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Low Stock Threshold (Units)</label>
+                            <input type="number" id="set-low_stock_threshold" name="low_stock_threshold" class="form-control" value="3">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Minimum Age</label>
+                            <input type="number" id="set-min_age" name="min_age" class="form-control" value="18">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Maximum Age</label>
+                            <input type="number" id="set-max_age" name="max_age" class="form-control" value="65">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Emergency SMS Notifications</label>
+                            <select id="set-emergency_sms" name="emergency_sms" class="form-control">
+                                <option value="true">Enabled</option>
+                                <option value="false">Disabled</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Auto-Match on Request Creation</label>
+                            <select id="set-auto_match" name="auto_match" class="form-control">
+                                <option value="false">Disabled (Manual Admin Trigger)</option>
+                                <option value="true">Enabled</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        async function loadSettings() {
+            const list = await apiGet('SettingsServlet');
+            if (!list) return;
+
+            list.forEach(s => {
+                const input = document.getElementById('set-' + s.settingKey);
+                if (input) input.value = s.settingValue;
+            });
+        }
+
+        async function handleSaveSettings(e) {
+            e.preventDefault();
+            const form = document.getElementById('form-settings');
+            const formData = new FormData(form);
+
+            const data = {};
+            formData.forEach((val, key) => data[key] = val);
+
+            const res = await apiPost('SettingsServlet', data);
+            if (res && res.success) {
+                showToast('Settings saved successfully', 'success');
+            } else {
+                showToast(res ? res.message : 'Error saving settings', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadSettings);
+    </script>
+</body>
+</html>

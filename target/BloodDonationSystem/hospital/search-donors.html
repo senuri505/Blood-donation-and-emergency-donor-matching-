@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Donors — HemoLink Hospital</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon" style="background:var(--info);"><i class="fa-solid fa-hospital"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Hospital Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Menu</div>
+            <a href="dashboard.html" class="menu-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a href="requests.html" class="menu-item"><i class="fa-solid fa-hand-holding-medical"></i> Blood Requests</a>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donations Received</a>
+            <a href="search-donors.html" class="menu-item active"><i class="fa-solid fa-magnifying-glass"></i> Search Donors</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar" style="background:#0c2a38; color:#06b6d4;">NH</div>
+                <div class="user-details">
+                    <h4 id="hosp-sidebar-name">National Hospital Colombo</h4>
+                    <p id="hosp-sidebar-license">SL-2024-001</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Search Donors</h1>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <div class="card-panel">
+                <div class="panel-header">
+                    <div class="panel-title">Find available donors</div>
+                </div>
+                <form id="donor-search-form" onsubmit="performDonorSearch(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Blood Group</label>
+                            <select id="search-bloodType" class="form-control">
+                                <option value="">Any</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="AB">AB</option>
+                                <option value="O">O</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Rh Factor</label>
+                            <select id="search-rhFactor" class="form-control">
+                                <option value="">Any</option>
+                                <option value="+">+</option>
+                                <option value="-">-</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Availability Status</label>
+                            <select id="search-availability" class="form-control">
+                                <option value="available" selected>Available Only</option>
+                                <option value="all">All Donors</option>
+                                <option value="unavailable">Unavailable Only</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">City</label>
+                            <input type="text" id="search-city" class="form-control" placeholder="City">
+                        </div>
+                        <div class="form-group" style="align-self:end;">
+                            <button class="btn btn-primary" style="padding:10px 16px;">Search</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="table-container" style="margin-top:16px;">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th>Donor Name</th>
+                                <th>BLOOD</th>
+                                <th>CITY</th>
+                                <th>AVAILABILITY</th>
+                                <th>PHONE</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="donor-search-body">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Send Request -->
+    <div class="modal-overlay" id="send-request-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title">Send Blood Request to Donor</div>
+                <button class="modal-close" onclick="closeModal('send-request-modal')">&times;</button>
+            </div>
+            <form id="form-send-request" onsubmit="handleSendRequestSubmit(event)">
+                <input type="hidden" id="sr-donorId">
+                <div class="form-group">
+                    <label class="form-label">Selected Donor</label>
+                    <input type="text" id="sr-donorName" class="form-control" readonly>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Patient Name</label>
+                        <input type="text" id="sr-patientName" class="form-control" placeholder="Full name of patient" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Units Needed</label>
+                        <input type="number" id="sr-units" class="form-control" value="1" min="1" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Required Blood Type</label>
+                        <select id="sr-bloodType" class="form-control">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="AB">AB</option>
+                            <option value="O">O</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rh Factor</label>
+                        <select id="sr-rhFactor" class="form-control">
+                            <option value="+">+</option>
+                            <option value="-">-</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Urgency Level</label>
+                        <select id="sr-urgency" class="form-control">
+                            <option value="routine">Routine</option>
+                            <option value="urgent" selected>Urgent</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact Phone</label>
+                        <input type="text" id="sr-phone" class="form-control" placeholder="Contact number" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Additional Medical Notes</label>
+                    <textarea id="sr-notes" class="form-control" rows="2" placeholder="e.g. Urgent blood requirement for surgery"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">Send Request</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="../js/script.js"></script>
+    <script>
+        let currentHospital = null;
+
+        async function init() {
+            const dash = await apiGet('DashboardServlet?action=hospital');
+            if (!dash || !dash.hospital) {
+                showToast('Please login as hospital', 'error');
+                setTimeout(() => window.location.href = '../login.html', 800);
+                return;
+            }
+            currentHospital = dash.hospital;
+            document.getElementById('hosp-sidebar-name').innerText = currentHospital.name;
+            document.getElementById('hosp-sidebar-license').innerText = currentHospital.license;
+        }
+
+        async function performDonorSearch(e) {
+            if (e) e.preventDefault();
+            const bt = document.getElementById('search-bloodType').value;
+            const rh = document.getElementById('search-rhFactor').value;
+            const city = document.getElementById('search-city').value;
+            const avail = document.getElementById('search-availability').value;
+
+            const params = new URLSearchParams();
+            params.append('action','searchCompatible');
+            if (bt) params.append('recipientBloodType', bt);
+            if (rh) params.append('recipientRh', rh);
+            if (city) params.append('city', city);
+            if (avail) params.append('availability', avail);
+
+            const list = await apiGet('DonorServlet?' + params.toString());
+            const tbody = document.getElementById('donor-search-body');
+            tbody.innerHTML = '';
+
+            // Strict client-side city filter check
+            let filteredList = list && Array.isArray(list) ? list : [];
+            if (city && city.trim() !== '') {
+                const targetCity = city.trim().toLowerCase();
+                filteredList = filteredList.filter(d => d.city && d.city.toLowerCase().includes(targetCity));
+            }
+
+            if (filteredList.length === 0) {
+                const cityDetail = city && city.trim() ? ` in "${city.trim()}"` : '';
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color:var(--warning); font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> No donors found matching criteria${cityDetail}.</td></tr>`;
+                return;
+            }
+
+            filteredList.forEach(d => {
+                const tr = document.createElement('tr');
+                const isAvailable = d.available !== undefined ? d.available : d.isAvailable;
+                tr.innerHTML = `
+                    <td style="font-weight:600; color:#fff;">${d.name}</td>
+                    <td><span class="badge badge-danger">${d.bloodType}${d.rhFactor}</span></td>
+                    <td>${d.city || '—'}</td>
+                    <td>${isAvailable ? '<span class="badge badge-success">Available</span>' : '<span class="badge badge-danger">Unavailable</span>'}</td>
+                    <td>${d.phone || '—'}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="openSendRequest(${d.id}, '${d.name.replace(/'/g, "\\'")}', '${d.bloodType}', '${d.rhFactor}', '${d.phone || ''}')">Send Request</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openSendRequest(donorId, donorName, bloodType, rhFactor, phone) {
+            document.getElementById('sr-donorId').value = donorId;
+            document.getElementById('sr-donorName').value = donorName + ' (' + bloodType + rhFactor + ')';
+            
+            // Check if user searched for specific blood group
+            const searchBt = document.getElementById('search-bloodType').value;
+            const searchRh = document.getElementById('search-rhFactor').value;
+            
+            document.getElementById('sr-bloodType').value = searchBt || bloodType;
+            document.getElementById('sr-rhFactor').value = searchRh || rhFactor;
+            document.getElementById('sr-phone').value = currentHospital ? (currentHospital.phone || phone) : phone;
+            openModal('send-request-modal');
+        }
+
+        async function handleSendRequestSubmit(e) {
+            e.preventDefault();
+            const donorId = document.getElementById('sr-donorId').value;
+            const patientName = document.getElementById('sr-patientName').value;
+            const units = document.getElementById('sr-units').value;
+            const urgency = document.getElementById('sr-urgency').value;
+            const notes = document.getElementById('sr-notes').value;
+            const phone = document.getElementById('sr-phone').value;
+            const bloodType = document.getElementById('sr-bloodType').value;
+            const rhFactor = document.getElementById('sr-rhFactor').value;
+
+            if (!currentHospital) {
+                showToast('Hospital context missing', 'error');
+                return;
+            }
+
+            const data = {
+                action: 'add',
+                hospitalId: currentHospital.id,
+                hospitalName: currentHospital.name,
+                city: currentHospital.city,
+                patientName: patientName,
+                bloodType: bloodType,
+                rhFactor: rhFactor,
+                unitsNeeded: units,
+                urgency: urgency,
+                contactPerson: currentHospital.name,
+                phone: phone,
+                notes: notes,
+                matchedDonorIds: String(donorId)
+            };
+
+            const res = await apiPost('BloodRequestServlet', data);
+            if (res && res.success) {
+                showToast('Blood donation request sent to donor successfully!', 'success');
+                closeModal('send-request-modal');
+                performDonorSearch();
+            } else {
+                showToast(res ? res.message : 'Failed to send request', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { init(); performDonorSearch(); });
+    </script>
+</body>
+</html>

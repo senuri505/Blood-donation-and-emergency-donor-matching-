@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — HemoLink Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon"><i class="fa-solid fa-droplet"></i></div>
+            <div class="brand-info">
+                <h2>HemoLink</h2>
+                <span>Admin Panel</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-category">Overview</div>
+            <a href="dashboard.html" class="menu-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+
+            <div class="menu-category">Management</div>
+            <a href="users.html" class="menu-item"><i class="fa-solid fa-users"></i> Manage Users</a>
+            <a href="approvals.html" class="menu-item"><i class="fa-solid fa-user-check"></i> Approvals</a>
+            <a href="hospitals.html" class="menu-item"><i class="fa-solid fa-hospital"></i> Hospitals</a>
+
+            <div class="menu-category">Operations</div>
+            <a href="blood-stock.html" class="menu-item"><i class="fa-solid fa-boxes-stacked"></i> Inventory</a>
+
+            <div class="menu-category">System</div>
+            <a href="donations.html" class="menu-item"><i class="fa-solid fa-clock-rotate-left"></i> Donation History</a>
+            <a href="notifications.html" class="menu-item"><i class="fa-solid fa-bell"></i> Notifications</a>
+            <a href="settings.html" class="menu-item"><i class="fa-solid fa-gear"></i> Settings</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="user-avatar">SA</div>
+                <div class="user-details">
+                    <h4>System Admin</h4>
+                    <p>admin</p>
+                </div>
+            </div>
+            <a href="../LogoutServlet" class="btn-logout-icon" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-title">
+                <h1>Dashboard</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="notifications.html" class="notif-bell" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge-count" style="display:none;">0</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="content-body">
+            <!-- Stats Cards Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-label">Approved Donors</div>
+                    <div class="stat-card-value" id="stat-donors">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Blood Units</div>
+                    <div class="stat-card-value" id="stat-units">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Active Requests</div>
+                    <div class="stat-card-value" id="stat-requests">0</div>
+                    <div class="stat-card-sub" id="stat-critical-sub">0 critical</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Hospitals</div>
+                    <div class="stat-card-value" id="stat-hospitals">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Pending Approvals</div>
+                    <div class="stat-card-value" id="stat-approvals">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-label">Total Donations</div>
+                    <div class="stat-card-value" id="stat-donations">0</div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="dashboard-grid">
+                <div class="card-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">Blood Inventory</div>
+                    </div>
+                    <div style="height: 320px; position: relative;">
+                        <canvas id="bloodInventoryChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">Donor Distribution</div>
+                    </div>
+                    <div style="height: 320px; position: relative;">
+                        <canvas id="donorDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="../js/script.js"></script>
+    <script>
+        let barChartInstance = null;
+        let doughnutChartInstance = null;
+
+        async function loadDashboardData() {
+            const data = await apiGet('DashboardServlet?action=admin');
+            if (!data) return;
+
+            document.getElementById('stat-donors').innerText = data.approvedDonors || 0;
+            document.getElementById('stat-units').innerText = data.bloodUnits || 0;
+            document.getElementById('stat-requests').innerText = data.activeRequests || 0;
+            document.getElementById('stat-critical-sub').innerText = (data.criticalRequests || 0) + ' critical';
+            document.getElementById('stat-hospitals').innerText = data.hospitals || 0;
+            document.getElementById('stat-approvals').innerText = data.pendingApprovals || 0;
+            document.getElementById('stat-donations').innerText = data.totalDonations || 0;
+
+            renderInventoryChart(data.bloodStock || {});
+            renderDonorChart(data.donorDistribution || {});
+        }
+
+        function renderInventoryChart(stockMap) {
+            const labels = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+            const values = labels.map(g => stockMap[g] || 0);
+
+            const ctx = document.getElementById('bloodInventoryChart').getContext('2d');
+            if (barChartInstance) barChartInstance.destroy();
+
+            barChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Available Units',
+                        data: values,
+                        backgroundColor: '#dc2626',
+                        borderRadius: 6,
+                        barThickness: 28
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#6b7a99' } },
+                        y: { grid: { color: '#232b45' }, ticks: { color: '#6b7a99', stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
+        function renderDonorChart(donorMap) {
+            const labels = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+            const values = labels.map(g => donorMap[g] || 0);
+
+            const ctx = document.getElementById('donorDistributionChart').getContext('2d');
+            if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+            doughnutChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#ef4444', '#f97316', '#f59e0b', '#10b981',
+                            '#06b6d4', '#3b82f6', '#6366f1', '#a855f7'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#151a2c'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', boxWidth: 12, padding: 12 }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+    </script>
+</body>
+</html>
